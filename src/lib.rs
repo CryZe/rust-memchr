@@ -21,7 +21,6 @@ instead of one. Similarly for `memchr3`.
 */
 
 #![cfg_attr(not(feature = "use_std"), no_std)]
-
 #![deny(missing_docs)]
 #![doc(html_root_url = "https://docs.rs/memchr/2.0.0")]
 
@@ -48,10 +47,10 @@ mod c;
 mod fallback;
 mod iter;
 mod naive;
-#[cfg(all(target_arch = "x86_64", memchr_runtime_simd))]
-mod x86;
 #[cfg(test)]
 mod tests;
+#[cfg(all(target_arch = "x86_64", memchr_runtime_simd))]
+mod x86;
 
 /// An iterator over all occurrences of the needle in a haystack.
 #[inline]
@@ -61,22 +60,13 @@ pub fn memchr_iter(needle: u8, haystack: &[u8]) -> Memchr {
 
 /// An iterator over all occurrences of the needles in a haystack.
 #[inline]
-pub fn memchr2_iter(
-    needle1: u8,
-    needle2: u8,
-    haystack: &[u8],
-) -> Memchr2 {
+pub fn memchr2_iter(needle1: u8, needle2: u8, haystack: &[u8]) -> Memchr2 {
     Memchr2::new(needle1, needle2, haystack)
 }
 
 /// An iterator over all occurrences of the needles in a haystack.
 #[inline]
-pub fn memchr3_iter(
-    needle1: u8,
-    needle2: u8,
-    needle3: u8,
-    haystack: &[u8],
-) -> Memchr3 {
+pub fn memchr3_iter(needle1: u8, needle2: u8, needle3: u8, haystack: &[u8]) -> Memchr3 {
     Memchr3::new(needle1, needle2, needle3, haystack)
 }
 
@@ -88,22 +78,13 @@ pub fn memrchr_iter(needle: u8, haystack: &[u8]) -> Rev<Memchr> {
 
 /// An iterator over all occurrences of the needles in a haystack, in reverse.
 #[inline]
-pub fn memrchr2_iter(
-    needle1: u8,
-    needle2: u8,
-    haystack: &[u8],
-) -> Rev<Memchr2> {
+pub fn memrchr2_iter(needle1: u8, needle2: u8, haystack: &[u8]) -> Rev<Memchr2> {
     Memchr2::new(needle1, needle2, haystack).rev()
 }
 
 /// An iterator over all occurrences of the needles in a haystack, in reverse.
 #[inline]
-pub fn memrchr3_iter(
-    needle1: u8,
-    needle2: u8,
-    needle3: u8,
-    haystack: &[u8],
-) -> Rev<Memchr3> {
+pub fn memrchr3_iter(needle1: u8, needle2: u8, needle3: u8, haystack: &[u8]) -> Rev<Memchr3> {
     Memchr3::new(needle1, needle2, needle3, haystack).rev()
 }
 
@@ -129,13 +110,14 @@ pub fn memrchr3_iter(
 /// ```
 #[inline]
 pub fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
-    #[cfg(all(target_arch = "x86_64", memchr_runtime_simd))]
+    #[cfg(all(not(miri), target_arch = "x86_64", memchr_runtime_simd))]
     #[inline(always)]
     fn imp(n1: u8, haystack: &[u8]) -> Option<usize> {
         x86::memchr(n1, haystack)
     }
 
     #[cfg(all(
+        not(miri),
         memchr_libc,
         not(all(target_arch = "x86_64", memchr_runtime_simd))
     ))]
@@ -144,9 +126,12 @@ pub fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
         c::memchr(n1, haystack)
     }
 
-    #[cfg(all(
-        not(memchr_libc),
-        not(all(target_arch = "x86_64", memchr_runtime_simd))
+    #[cfg(any(
+        miri,
+        all(
+            not(memchr_libc),
+            not(all(target_arch = "x86_64", memchr_runtime_simd))
+        )
     ))]
     #[inline(always)]
     fn imp(n1: u8, haystack: &[u8]) -> Option<usize> {
@@ -163,13 +148,13 @@ pub fn memchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 /// Like `memchr`, but searches for two bytes instead of one.
 #[inline]
 pub fn memchr2(needle1: u8, needle2: u8, haystack: &[u8]) -> Option<usize> {
-    #[cfg(all(target_arch = "x86_64", memchr_runtime_simd))]
+    #[cfg(all(not(miri), target_arch = "x86_64", memchr_runtime_simd))]
     #[inline(always)]
     fn imp(n1: u8, n2: u8, haystack: &[u8]) -> Option<usize> {
         x86::memchr2(n1, n2, haystack)
     }
 
-    #[cfg(not(all(target_arch = "x86_64", memchr_runtime_simd)))]
+    #[cfg(not(all(not(miri), target_arch = "x86_64", memchr_runtime_simd)))]
     #[inline(always)]
     fn imp(n1: u8, n2: u8, haystack: &[u8]) -> Option<usize> {
         fallback::memchr2(n1, n2, haystack)
@@ -184,19 +169,14 @@ pub fn memchr2(needle1: u8, needle2: u8, haystack: &[u8]) -> Option<usize> {
 
 /// Like `memchr`, but searches for three bytes instead of one.
 #[inline]
-pub fn memchr3(
-    needle1: u8,
-    needle2: u8,
-    needle3: u8,
-    haystack: &[u8],
-) -> Option<usize> {
-    #[cfg(all(target_arch = "x86_64", memchr_runtime_simd))]
+pub fn memchr3(needle1: u8, needle2: u8, needle3: u8, haystack: &[u8]) -> Option<usize> {
+    #[cfg(all(not(miri), target_arch = "x86_64", memchr_runtime_simd))]
     #[inline(always)]
     fn imp(n1: u8, n2: u8, n3: u8, haystack: &[u8]) -> Option<usize> {
         x86::memchr3(n1, n2, n3, haystack)
     }
 
-    #[cfg(not(all(target_arch = "x86_64", memchr_runtime_simd)))]
+    #[cfg(not(all(not(miri), target_arch = "x86_64", memchr_runtime_simd)))]
     #[inline(always)]
     fn imp(n1: u8, n2: u8, n3: u8, haystack: &[u8]) -> Option<usize> {
         fallback::memchr3(n1, n2, n3, haystack)
@@ -231,13 +211,14 @@ pub fn memchr3(
 /// ```
 #[inline]
 pub fn memrchr(needle: u8, haystack: &[u8]) -> Option<usize> {
-    #[cfg(all(target_arch = "x86_64", memchr_runtime_simd))]
+    #[cfg(all(not(miri), target_arch = "x86_64", memchr_runtime_simd))]
     #[inline(always)]
     fn imp(n1: u8, haystack: &[u8]) -> Option<usize> {
         x86::memrchr(n1, haystack)
     }
 
     #[cfg(all(
+        not(miri),
         all(memchr_libc, target_os = "linux"),
         not(all(target_arch = "x86_64", memchr_runtime_simd))
     ))]
@@ -247,8 +228,8 @@ pub fn memrchr(needle: u8, haystack: &[u8]) -> Option<usize> {
     }
 
     #[cfg(all(
-        not(all(memchr_libc, target_os = "linux")),
-        not(all(target_arch = "x86_64", memchr_runtime_simd))
+        not(all(not(miri), memchr_libc, target_os = "linux")),
+        not(all(not(miri), target_arch = "x86_64", memchr_runtime_simd))
     ))]
     #[inline(always)]
     fn imp(n1: u8, haystack: &[u8]) -> Option<usize> {
@@ -265,13 +246,13 @@ pub fn memrchr(needle: u8, haystack: &[u8]) -> Option<usize> {
 /// Like `memrchr`, but searches for two bytes instead of one.
 #[inline]
 pub fn memrchr2(needle1: u8, needle2: u8, haystack: &[u8]) -> Option<usize> {
-    #[cfg(all(target_arch = "x86_64", memchr_runtime_simd))]
+    #[cfg(all(not(miri), target_arch = "x86_64", memchr_runtime_simd))]
     #[inline(always)]
     fn imp(n1: u8, n2: u8, haystack: &[u8]) -> Option<usize> {
         x86::memrchr2(n1, n2, haystack)
     }
 
-    #[cfg(not(all(target_arch = "x86_64", memchr_runtime_simd)))]
+    #[cfg(not(all(not(miri), target_arch = "x86_64", memchr_runtime_simd)))]
     #[inline(always)]
     fn imp(n1: u8, n2: u8, haystack: &[u8]) -> Option<usize> {
         fallback::memrchr2(n1, n2, haystack)
@@ -286,19 +267,14 @@ pub fn memrchr2(needle1: u8, needle2: u8, haystack: &[u8]) -> Option<usize> {
 
 /// Like `memrchr`, but searches for three bytes instead of one.
 #[inline]
-pub fn memrchr3(
-    needle1: u8,
-    needle2: u8,
-    needle3: u8,
-    haystack: &[u8],
-) -> Option<usize> {
-    #[cfg(all(target_arch = "x86_64", memchr_runtime_simd))]
+pub fn memrchr3(needle1: u8, needle2: u8, needle3: u8, haystack: &[u8]) -> Option<usize> {
+    #[cfg(all(not(miri), target_arch = "x86_64", memchr_runtime_simd))]
     #[inline(always)]
     fn imp(n1: u8, n2: u8, n3: u8, haystack: &[u8]) -> Option<usize> {
         x86::memrchr3(n1, n2, n3, haystack)
     }
 
-    #[cfg(not(all(target_arch = "x86_64", memchr_runtime_simd)))]
+    #[cfg(not(all(not(miri), target_arch = "x86_64", memchr_runtime_simd)))]
     #[inline(always)]
     fn imp(n1: u8, n2: u8, n3: u8, haystack: &[u8]) -> Option<usize> {
         fallback::memrchr3(n1, n2, n3, haystack)
